@@ -1,40 +1,64 @@
 "use client";
+
 import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { getToken, logout } from "@/lib/auth";
-import { api, attachAuth } from "@/lib/api";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const [username, setUsername] = useState("");
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-    attachAuth(token);
-    // optional: fetch user profile
-    api
-      .get("/auth/profile")
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [router]);
-
-  if (loading) return <div className="p-6">Loading...</div>;
+    // Ambil user info dari localStorage (sementara)
+    const user = localStorage.getItem("username");
+    if (user) setUsername(user);
+  }, []);
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <button onClick={logout} className="px-3 py-1 border rounded">
-          Logout
-        </button>
+        <h1 className="text-3xl font-bold">
+          Selamat Datang, {username || "User"}!
+        </h1>
       </div>
 
-      <div className="mt-6">
-        Konten dashboard di sini (produk, transaksi, dsb)
+      <div className="grid gap-6 md:grid-cols-3">
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => router.push("/dashboard/products")}
+        >
+          <CardHeader>
+            <CardTitle>🛍️ Produk</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">Lihat semua produk yang tersedia</p>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => router.push("/dashboard/cart")}
+        >
+          <CardHeader>
+            <CardTitle>🛒 Keranjang</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">Lihat keranjang belanja Anda</p>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => router.push("/dashboard/transactions")}
+        >
+          <CardHeader>
+            <CardTitle>📦 Transaksi</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">Riwayat pembelian Anda</p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
