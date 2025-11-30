@@ -8,10 +8,10 @@ export default function DashboardLayout({
 }) {
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gray-50">
+      <div className="w-full">
         <Navbar />
         {/* Tambah padding-top karena navbar fixed */}
-        <main className="pt-20 container mx-auto px-4 py-8">{children}</main>
+        <main className="py-16">{children}</main>
       </div>
     </AuthGuard>
   );

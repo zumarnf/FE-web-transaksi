@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { authAPI } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { Button } from "../ui/button";
 import { logout } from "@/lib/auth";
@@ -24,14 +25,20 @@ export function Navbar() {
     setCartCount(cart.length);
   }, []);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    try {
+      await authAPI.logoutAPI(); // Optional: hit API
+    } catch (error) {
+      // Ignore API error
+    } finally {
+      logout(); // Hapus token & redirect
+    }
   };
 
   return (
     <nav
       className={`fixed top-0 left-0 w-full z-50 transition-all duration-200 ${
-        scrolled ? "bg-amber-100 shadow-md" : "bg-amber-50/80 backdrop-blur-sm"
+        scrolled ? "bg-amber-50/80 opacity-90" : "bg-amber-100 shadow-md"
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">

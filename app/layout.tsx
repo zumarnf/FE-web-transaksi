@@ -1,10 +1,10 @@
 import "./globals.css";
 import Providers from "./providers";
-import { Toaster } from "sonner"; // ✅ import Toaster
+import { Toaster } from "sonner";
 
 export const metadata = {
-  title: "Project Shop",
-  description: "Marketplace starter",
+  title: "WhopShop",
+  description: "Toko Elektronik",
 };
 
 export default function RootLayout({
