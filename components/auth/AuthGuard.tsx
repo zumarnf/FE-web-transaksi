@@ -5,21 +5,36 @@ import { useRouter } from "next/navigation";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [allowed, setAllowed] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+  const [isAllowed, setIsAllowed] = useState(false);
 
   useEffect(() => {
-    // Cek token
-    const token = localStorage.getItem("token");
+    const checkAuth = () => {
+      const token = localStorage.getItem("token");
 
-    if (!token) {
-      router.replace("/login");
-    } else {
-      setAllowed(true);
-    }
+      if (!token) {
+        router.replace("/login");
+      } else {
+        setIsAllowed(true);
+      }
+
+      setIsChecking(false);
+    };
+
+    checkAuth();
   }, [router]);
 
-  // Cegah render awal supaya tidak error hydration
-  if (!allowed) return null;
+  // Show loading spinner while checking
+  if (isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
+      </div>
+    );
+  }
+
+  // If not allowed, return null (will redirect)
+  if (!isAllowed) return null;
 
   return <>{children}</>;
 }

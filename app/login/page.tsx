@@ -70,14 +70,12 @@ export default function LoginPage() {
               control={form.control}
               name="username"
               label="Username"
-              placeholder="Masukkan username"
             />
 
             <PasswordInput
               control={form.control}
               name="password"
               label="Password"
-              placeholder="Masukkan password"
             />
 
             <Button

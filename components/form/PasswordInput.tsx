@@ -12,7 +12,7 @@ export function PasswordInput({ control, name, label, ...props }: any) {
       name={name}
       render={({ field, fieldState }) => (
         <div className="flex flex-col gap-1 relative">
-          {label && <label className="text-sm font-medium">{label}</label>}
+          {label && <label className="text-xs font-medium">{label}</label>}
           <Input type={show ? "text" : "password"} {...field} {...props} />
           <button
             type="button"
