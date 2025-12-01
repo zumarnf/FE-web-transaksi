@@ -14,7 +14,7 @@ import {
   ArrowLeft,
   ShoppingBag,
 } from "lucide-react";
-import { cartAPI } from "@/lib/api";
+import { cartAPI, transactionsAPI } from "@/lib/api";
 
 interface CartItem {
   id: number;
@@ -34,7 +34,6 @@ export default function CartPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load cart from localStorage
   useEffect(() => {
     loadCart();
   }, []);
@@ -46,7 +45,6 @@ export default function CartPage() {
     setIsLoading(false);
   };
 
-  // Format price
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -55,7 +53,6 @@ export default function CartPage() {
     }).format(price);
   };
 
-  // Update quantity
   const updateQuantity = (productId: number, newQuantity: number) => {
     const item = cart.find((item) => item.id === productId);
 
@@ -76,7 +73,6 @@ export default function CartPage() {
     toast.success("Jumlah diperbarui!");
   };
 
-  // Remove item
   const removeItem = (productId: number) => {
     const item = cart.find((item) => item.id === productId);
     cartAPI.removeItem(productId);
@@ -93,51 +89,40 @@ export default function CartPage() {
     }
   };
 
-  // Calculate subtotal
   const subtotal = cart.reduce((total, item) => {
     return total + item.price * item.quantity;
   }, 0);
 
-  // Calculate total items
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
 
   // Checkout
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cart.length === 0) {
       toast.error("Keranjang masih kosong!");
       return;
     }
 
-    // For now, just show success and clear cart
-    // Nanti ganti dengan redirect ke checkout page
-    toast.success("Pesanan berhasil dibuat!");
-
-    // Save to transactions
-    const transaction = {
-      id: Date.now(),
-      items: cart.map((item) => ({
+    try {
+      // Format data untuk Laravel
+      const items = cart.map((item) => ({
         product_id: item.id,
         quantity: item.quantity,
-        price: item.price,
-      })),
-      total: subtotal,
-      status: "success",
-      created_at: new Date().toISOString(),
-    };
+      }));
 
-    const transactions = JSON.parse(
-      localStorage.getItem("transactions") || "[]"
-    );
-    transactions.unshift(transaction);
-    localStorage.setItem("transactions", JSON.stringify(transactions));
+      await transactionsAPI.create({ items });
 
-    // Clear cart
-    cartAPI.clearCart();
+      toast.success("Pesanan berhasil dibuat!");
 
-    // Redirect to transactions
-    setTimeout(() => {
-      router.push("/dashboard/transactions");
-    }, 1000);
+      // Clear cart
+      cartAPI.clearCart();
+
+      // Redirect to transactions
+      setTimeout(() => {
+        router.push("/dashboard/transactions");
+      }, 1000);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Gagal membuat pesanan");
+    }
   };
 
   if (isLoading) {
@@ -151,7 +136,6 @@ export default function CartPage() {
     );
   }
 
-  // Empty cart state
   if (cart.length === 0) {
     return (
       <div className="max-w-4xl mx-auto">
@@ -201,7 +185,6 @@ export default function CartPage() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Cart Items */}
         <div className="lg:col-span-2 space-y-4">
           {cart.map((item) => (
             <Card key={item.id} className="p-4">
@@ -225,7 +208,6 @@ export default function CartPage() {
                   />
                 </div>
 
-                {/* Product Info */}
                 <div className="flex-1">
                   <h3
                     className="font-semibold text-lg mb-1 hover:text-amber-600 cursor-pointer"
@@ -246,7 +228,6 @@ export default function CartPage() {
                     {formatPrice(item.price)}
                   </p>
 
-                  {/* Quantity Controls */}
                   <div className="flex items-center gap-4">
                     <div className="flex items-center border rounded-lg">
                       <Button
@@ -289,7 +270,6 @@ export default function CartPage() {
                   </div>
                 </div>
 
-                {/* Subtotal */}
                 <div className="text-right">
                   <p className="text-sm text-gray-500 mb-1">Subtotal</p>
                   <p className="text-xl font-bold">
@@ -301,7 +281,6 @@ export default function CartPage() {
           ))}
         </div>
 
-        {/* Order Summary */}
         <div className="lg:col-span-1">
           <Card className="p-6 sticky top-6">
             <h2 className="text-xl font-bold mb-4">Ringkasan Belanja</h2>

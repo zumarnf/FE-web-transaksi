@@ -1,41 +1,44 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 
 import AuthCard from "@/components/auth/AuthCard";
 import { InputField } from "@/components/form/InputField";
 import { PasswordInput } from "@/components/form/PasswordInput";
 import { Button } from "@/components/ui/button";
-import { api } from "@/lib/api";
+import { authAPI } from "@/lib/api";
 import { registerSchema, RegisterValues } from "@/validators/registerSchema";
 
 export default function RegisterPage() {
   const router = useRouter();
 
-  // useForm dengan Zod resolver
   const form = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { username: "", email: "", password: "" },
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      password_confirmation: "",
+    },
   });
 
-  // Mutation TanStack Query
   const mutation = useMutation({
     mutationFn: async (values: RegisterValues) => {
-      // Dummy API call
-      const res = await api
-        .post("/users/add", values)
-        .catch(() => ({ data: { id: Date.now() } }));
+      const res = await authAPI.register(values);
       return res.data;
     },
     onSuccess: () => {
-      toast.success("Registrasi berhasil, silakan login");
+      toast.success("Registrasi berhasil! Silakan login");
       router.push("/login");
     },
-    onError: () => toast.error("Registrasi gagal"),
+    onError: (err: any) => {
+      const errorMessage = err.response?.data?.message || "Registrasi gagal";
+      toast.error(errorMessage);
+    },
   });
 
   return (
@@ -44,16 +47,22 @@ export default function RegisterPage() {
         className="space-y-4"
         onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
       >
-        <InputField control={form.control} name="username" label="Username" />
+        <InputField control={form.control} name="name" label="Nama Lengkap" />
         <InputField
           control={form.control}
           name="email"
-          label="Email (opsional)"
+          label="Email"
+          type="email"
         />
         <PasswordInput
           control={form.control}
           name="password"
           label="Password"
+        />
+        <PasswordInput
+          control={form.control}
+          name="password_confirmation"
+          label="Konfirmasi Password"
         />
 
         <Button type="submit" className="w-full" disabled={mutation.isPending}>

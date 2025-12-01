@@ -16,46 +16,77 @@ import {
 import { transactionsAPI } from "@/lib/api";
 import { toast } from "sonner";
 
-interface TransactionItem {
+interface TransactionDetail {
+  id: number;
+  transaction_id: number;
   product_id: number;
   quantity: number;
-  price: number;
+  price_per_item: string;
+  subtotal: string;
+  product?: {
+    id: number;
+    name: string;
+    price: string;
+    image?: string;
+  };
 }
 
 interface Transaction {
   id: number;
   user_id: number;
-  total: number;
-  items: TransactionItem[];
+  total_price: string;
   status: string;
+  payment_proof: string | null;
   created_at: string;
+  updated_at: string;
+  details: TransactionDetail[];
 }
 
 export default function TransactionDetailPage() {
   const router = useRouter();
   const params = useParams();
   const [transaction, setTransaction] = useState<Transaction | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadTransaction();
   }, [params.id]);
 
   const loadTransaction = async () => {
+    setIsLoading(true);
     try {
       const { data } = await transactionsAPI.getById(params.id as string);
-      setTransaction(data);
-    } catch (error) {
+
+      console.log("Transaction Detail:", data);
+
+      if (!data) {
+        toast.error("Transaksi tidak ditemukan");
+        setTransaction(null);
+      } else {
+        setTransaction(data);
+      }
+    } catch (error: any) {
       console.error("Failed to load transaction:", error);
       toast.error("Gagal memuat detail transaksi");
+      setTransaction(null);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | string) => {
+    const numPrice = typeof price === "string" ? parseFloat(price) : price;
+
+    if (isNaN(numPrice)) {
+      console.error("Invalid price:", price);
+      return "Rp0";
+    }
+
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
-    }).format(price);
+    }).format(numPrice);
   };
 
   const formatDate = (dateString: string) => {
@@ -71,9 +102,13 @@ export default function TransactionDetailPage() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; className: string }> = {
-      success: { label: "Berhasil", className: "bg-green-500 text-white" },
-      pending: { label: "Menunggu", className: "bg-yellow-500 text-white" },
-      failed: { label: "Gagal", className: "bg-red-500 text-white" },
+      pending: { label: "Sukses", className: "bg-green-500 text-white" },
+      paid: { label: "Dibayar", className: "bg-green-500 text-white" },
+      cancelled: { label: "Dibatalkan", className: "bg-red-500 text-white" },
+      waiting_verification: {
+        label: "Menunggu Verifikasi",
+        className: "bg-orange-500 text-white",
+      },
     };
 
     const config = statusConfig[status] || {
@@ -84,14 +119,25 @@ export default function TransactionDetailPage() {
     return <Badge className={config.className}>{config.label}</Badge>;
   };
 
-  const getTotalItems = (items: TransactionItem[]) => {
-    return items.reduce((total, item) => total + item.quantity, 0);
+  const getTotalItems = (details: TransactionDetail[]) => {
+    if (!details || !Array.isArray(details)) return 0;
+    return details.reduce((total, item) => total + (item.quantity || 0), 0);
   };
 
   const handleDownloadInvoice = () => {
     toast.success("Invoice akan didownload...");
-    // TODO: Implement PDF download
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4" />
+          <p className="text-gray-600">Memuat detail transaksi...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!transaction) {
     return (
@@ -110,7 +156,7 @@ export default function TransactionDetailPage() {
   }
 
   return (
-    <div className="max-w-full px-20 mx-auto pt-10">
+    <div className="max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-6">
         <Button
@@ -157,7 +203,7 @@ export default function TransactionDetailPage() {
             <div className="flex items-center gap-2">
               <Package className="w-4 h-4 text-gray-500" />
               <p className="font-medium">
-                {getTotalItems(transaction.items)} produk
+                {getTotalItems(transaction.details)} produk
               </p>
             </div>
           </div>
@@ -169,24 +215,33 @@ export default function TransactionDetailPage() {
         <h2 className="text-xl font-bold mb-4">Detail Produk</h2>
 
         <div className="space-y-4">
-          {transaction.items.map((item, index) => (
-            <div key={index}>
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <p className="font-medium">Produk ID: {item.product_id}</p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Jumlah: {item.quantity} x {formatPrice(item.price)}
+          {transaction.details && transaction.details.length > 0 ? (
+            transaction.details.map((item, index) => (
+              <div key={index}>
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <p className="font-medium">
+                      {item.product?.name || `Produk ID: ${item.product_id}`}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Jumlah: {item.quantity} x{" "}
+                      {formatPrice(item.price_per_item)}
+                    </p>
+                  </div>
+                  <p className="font-bold text-amber-600">
+                    {formatPrice(item.subtotal)}
                   </p>
                 </div>
-                <p className="font-bold text-amber-600">
-                  {formatPrice(item.price * item.quantity)}
-                </p>
+                {index < transaction.details.length - 1 && (
+                  <Separator className="mt-4" />
+                )}
               </div>
-              {index < transaction.items.length - 1 && (
-                <Separator className="mt-4" />
-              )}
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="text-center text-gray-500 py-4">
+              Tidak ada detail produk
+            </p>
+          )}
         </div>
       </Card>
 
@@ -197,7 +252,7 @@ export default function TransactionDetailPage() {
         <div className="space-y-3">
           <div className="flex justify-between text-gray-600">
             <span>Subtotal Produk</span>
-            <span>{formatPrice(transaction.total)}</span>
+            <span>{formatPrice(transaction.total_price)}</span>
           </div>
 
           <div className="flex justify-between text-gray-600">
@@ -215,7 +270,7 @@ export default function TransactionDetailPage() {
           <div className="flex justify-between text-xl font-bold">
             <span>Total Pembayaran</span>
             <span className="text-amber-600">
-              {formatPrice(transaction.total)}
+              {formatPrice(transaction.total_price)}
             </span>
           </div>
         </div>

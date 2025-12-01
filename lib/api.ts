@@ -5,14 +5,10 @@ import { getToken } from "./auth";
 // CONFIGURATION
 // ========================================
 
-// Toggle ini untuk switch antara DummyJSON dan Laravel
-const USE_DUMMY_API = true; // ⬅️ Ubah jadi false saat backend Laravel ready
-
-const DUMMY_API_URL = "https://dummyjson.com";
 const LARAVEL_API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
-const BASE_URL = USE_DUMMY_API ? DUMMY_API_URL : LARAVEL_API_URL;
+const BASE_URL = LARAVEL_API_URL;
 
 // ========================================
 // AXIOS INSTANCE
@@ -22,8 +18,9 @@ export const api = axios.create({
   baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
+    Accept: "application/json",
   },
-  timeout: 10000, // 10 detik
+  timeout: 10000,
 });
 
 // ========================================
@@ -55,20 +52,31 @@ export function attachAuth(token?: string) {
   }
 }
 
-// Transform DummyJSON response to Laravel format
-function transformDummyProduct(dummy: any) {
+function transformLaravelProduct(product: any) {
+  const baseURL =
+    process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") ||
+    "http://localhost:8000";
+
+  // Build image URL
+  let imageUrl = "https://placehold.co/400x400/f3f4f6/9ca3af?text=No+Image";
+
+  if (product.image) {
+    if (product.image.startsWith("http")) {
+      imageUrl = product.image;
+    } else {
+      imageUrl = `${baseURL}/storage/${product.image}`;
+    }
+  }
+
   return {
-    id: dummy.id,
-    category_id: 1, // dummy category
-    name: dummy.title,
-    image: dummy.thumbnail,
-    description: dummy.description,
-    price: dummy.price,
-    stock: dummy.stock,
-    category: {
-      id: 1,
-      name: dummy.category,
-    },
+    id: product.id,
+    category_id: product.category_id,
+    name: product.name,
+    image: imageUrl,
+    description: product.description,
+    price: parseFloat(product.price),
+    stock: product.stock,
+    category: product.category,
   };
 }
 
@@ -77,44 +85,29 @@ function transformDummyProduct(dummy: any) {
 // ========================================
 
 export const authAPI = {
-  login: async (data: { username: string; password: string }) => {
-    if (USE_DUMMY_API) {
-      // ✅ FIX: DummyJSON endpoint adalah /auth/login
-      return api.post("/auth/login", data);
-    } else {
-      return api.post("/login", data);
-    }
+  login: async (data: { email: string; password: string }) => {
+    const response = await api.post("/user/login", data);
+    return response;
   },
 
   register: async (data: {
-    username: string;
-    email?: string;
+    name: string;
+    email: string;
     password: string;
+    password_confirmation: string;
   }) => {
-    if (USE_DUMMY_API) {
-      return api.post("/users/add", data);
-    } else {
-      return api.post("/register", data);
-    }
+    const response = await api.post("/user/register", data);
+    return response;
   },
 
   me: async () => {
-    if (USE_DUMMY_API) {
-      return api.get("/auth/me");
-    } else {
-      return api.get("/me");
-    }
+    const response = await api.get("/user/profile");
+    return response;
   },
 
-  // ⬅️ Rename dari logout ke logoutAPI
-  // Hanya untuk hit API, TIDAK menghapus token localStorage
-  // Gunakan logout() dari lib/auth.ts untuk logout user
   logoutAPI: async () => {
-    if (USE_DUMMY_API) {
-      return Promise.resolve({ data: { message: "Logged out" } });
-    } else {
-      return api.post("/logout");
-    }
+    const response = await api.post("/user/logout");
+    return response;
   },
 };
 
@@ -124,59 +117,64 @@ export const authAPI = {
 
 export const productsAPI = {
   getAll: async (params?: { limit?: number; skip?: number }) => {
-    if (USE_DUMMY_API) {
-      const response = await api.get("/products", { params });
-      return {
-        ...response,
-        data: {
-          data: response.data.products.map(transformDummyProduct),
-          total: response.data.total,
-        },
-      };
-    } else {
-      return api.get("/products");
-    }
+    const response = await api.get("/product");
+
+    // Transform products
+    const products = response.data.data.map(transformLaravelProduct);
+
+    return {
+      ...response,
+      data: {
+        data: products,
+        total: products.length,
+      },
+    };
   },
 
   getById: async (id: string | number) => {
-    if (USE_DUMMY_API) {
-      const response = await api.get(`/products/${id}`);
-      return {
-        ...response,
-        data: transformDummyProduct(response.data),
-      };
-    } else {
-      return api.get(`/products/${id}`);
-    }
+    const response = await api.get(`/product/${id}`);
+
+    const product = transformLaravelProduct(response.data.data);
+
+    return {
+      ...response,
+      data: product,
+    };
   },
 
   search: async (query: string) => {
-    if (USE_DUMMY_API) {
-      const response = await api.get(`/products/search?q=${query}`);
-      return {
-        ...response,
-        data: {
-          data: response.data.products.map(transformDummyProduct),
-          total: response.data.total,
-        },
-      };
-    } else {
-      return api.get(`/products?search=${query}`);
-    }
+    const response = await api.get("/product");
+
+    const products = response.data.data
+      .filter(
+        (p: any) =>
+          p.name.toLowerCase().includes(query.toLowerCase()) ||
+          p.description?.toLowerCase().includes(query.toLowerCase())
+      )
+      .map(transformLaravelProduct);
+
+    return {
+      ...response,
+      data: {
+        data: products,
+        total: products.length,
+      },
+    };
   },
 
   getByCategory: async (categoryId: number) => {
-    if (USE_DUMMY_API) {
-      const response = await api.get("/products");
-      return {
-        ...response,
-        data: {
-          data: response.data.products.map(transformDummyProduct),
-        },
-      };
-    } else {
-      return api.get(`/products?category_id=${categoryId}`);
-    }
+    const response = await api.get("/product");
+
+    const products = response.data.data
+      .filter((p: any) => p.category_id === categoryId)
+      .map(transformLaravelProduct);
+
+    return {
+      ...response,
+      data: {
+        data: products,
+      },
+    };
   },
 };
 
@@ -186,20 +184,13 @@ export const productsAPI = {
 
 export const categoriesAPI = {
   getAll: async () => {
-    if (USE_DUMMY_API) {
-      const response = await api.get("/products/categories");
-      return {
-        ...response,
-        data: {
-          data: response.data.map((name: string, index: number) => ({
-            id: index + 1,
-            name,
-          })),
-        },
-      };
-    } else {
-      return api.get("/categories");
-    }
+    const response = await api.get("/category");
+    return {
+      ...response,
+      data: {
+        data: response.data.data,
+      },
+    };
   },
 };
 
@@ -283,52 +274,46 @@ export const cartAPI = {
 
 export const transactionsAPI = {
   create: async (data: {
-    items: Array<{ product_id: number; quantity: number; price: number }>;
-    total: number;
+    items: Array<{ product_id: number; quantity: number }>;
   }) => {
-    if (USE_DUMMY_API) {
-      // Fake transaction - simpan ke localStorage
-      const transaction = {
-        id: Date.now(),
-        user_id: 1,
-        total: data.total,
-        items: data.items,
-        status: "success",
-        created_at: new Date().toISOString(),
-      };
-
-      const transactions = JSON.parse(
-        localStorage.getItem("transactions") || "[]"
-      );
-      transactions.push(transaction);
-      localStorage.setItem("transactions", JSON.stringify(transactions));
-
-      return { data: transaction };
-    } else {
-      return api.post("/transactions", data);
-    }
+    const response = await api.post("/transactions", data);
+    return response;
   },
 
   getAll: async () => {
-    if (USE_DUMMY_API) {
-      const transactions = JSON.parse(
-        localStorage.getItem("transactions") || "[]"
-      );
-      return { data: { data: transactions } };
-    } else {
-      return api.get("/transactions");
+    try {
+      const response = await api.get("/transactions/my");
+
+      console.log("Transactions API Response:", response.data);
+
+      return {
+        data: {
+          data: response.data.data || [], // ← Sudah benar!
+        },
+      };
+    } catch (error) {
+      console.error("Transactions API error:", error);
+      return {
+        data: {
+          data: [],
+        },
+      };
     }
   },
 
   getById: async (id: string | number) => {
-    if (USE_DUMMY_API) {
-      const transactions = JSON.parse(
-        localStorage.getItem("transactions") || "[]"
-      );
+    try {
+      // ✅ Ambil dari list transactions lalu filter
+      const response = await api.get("/transactions/my");
+      const transactions = response.data.data || [];
       const transaction = transactions.find((t: any) => t.id === Number(id));
-      return { data: transaction };
-    } else {
-      return api.get(`/transactions/${id}`);
+
+      console.log("Transaction detail:", transaction);
+
+      return { data: transaction || null };
+    } catch (error) {
+      console.error("Transaction detail error:", error);
+      return { data: null };
     }
   },
 };

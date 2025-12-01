@@ -61,7 +61,6 @@ export function ProductCard({
       className="group bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer flex flex-col h-full overflow-hidden"
       onClick={handleCardClick}
     >
-      {/* Image Container */}
       <div className="relative aspect-4/3 overflow-hidden bg-gray-100">
         <img
           src={product.image || "/placeholder-product.png"}
@@ -75,7 +74,6 @@ export function ProductCard({
 
         {/* Badges */}
         <div className="absolute top-2 left-2 right-2 flex justify-between items-start gap-1">
-          {/* Category Badge */}
           {product.category && (
             <Badge
               variant="secondary"
@@ -85,7 +83,6 @@ export function ProductCard({
             </Badge>
           )}
 
-          {/* Stock Badge */}
           {product.stock < 10 && product.stock > 0 && (
             <Badge
               variant="destructive"
@@ -103,14 +100,11 @@ export function ProductCard({
         </div>
       </div>
 
-      {/* Content Section */}
       <div className="p-3 flex-1 flex flex-col">
-        {/* Title */}
         <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-amber-600 transition-colors h-10">
           {product.name}
         </h3>
 
-        {/* Price & Stock */}
         <div className="mt-auto">
           <div className="text-lg font-bold text-amber-600 mb-1">
             {formatPrice(product.price)}
@@ -119,7 +113,6 @@ export function ProductCard({
         </div>
       </div>
 
-      {/* Button Section */}
       {showAddToCart && (
         <div className="p-3 pt-0">
           <Button
@@ -137,7 +130,6 @@ export function ProductCard({
   );
 }
 
-// Loading skeleton component
 export function ProductCardSkeleton() {
   return (
     <Card className="overflow-hidden h-full flex flex-col">

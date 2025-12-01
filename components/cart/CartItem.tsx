@@ -36,7 +36,6 @@ export function CartItem({ item, onUpdateQuantity, onRemove }: CartItemProps) {
   return (
     <Card className="p-4">
       <div className="flex gap-4">
-        {/* Product Image */}
         <div
           className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 shrink-0 cursor-pointer"
           onClick={() => router.push(`/dashboard/products/${item.id}`)}
@@ -55,7 +54,6 @@ export function CartItem({ item, onUpdateQuantity, onRemove }: CartItemProps) {
           />
         </div>
 
-        {/* Product Info */}
         <div className="flex-1">
           <h3
             className="font-semibold text-lg mb-1 hover:text-amber-600 cursor-pointer"
@@ -72,7 +70,6 @@ export function CartItem({ item, onUpdateQuantity, onRemove }: CartItemProps) {
             {formatPrice(item.price)}
           </p>
 
-          {/* Quantity Controls */}
           <div className="flex items-center gap-4">
             <div className="flex items-center border rounded-lg">
               <Button
@@ -109,7 +106,6 @@ export function CartItem({ item, onUpdateQuantity, onRemove }: CartItemProps) {
           </div>
         </div>
 
-        {/* Subtotal */}
         <div className="text-right">
           <p className="text-sm text-gray-500 mb-1">Subtotal</p>
           <p className="text-xl font-bold">

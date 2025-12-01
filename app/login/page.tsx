@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { InputField } from "@/components/form/InputField";
 import { PasswordInput } from "@/components/form/PasswordInput";
 import { LoginSchema, loginSchema } from "@/validators/loginSchema";
+import { authAPI } from "@/lib/api";
+import { saveToken } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,36 +22,33 @@ export default function LoginPage() {
   const form = useForm<LoginSchema>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
 
   const mutation = useMutation({
     mutationFn: async (values: LoginSchema) => {
-      const res = await fetch("https://dummyjson.com/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-
-      if (!res.ok) {
-        throw new Error("Username atau password salah");
-      }
-
-      return res.json();
+      const res = await authAPI.login(values);
+      return res.data;
     },
 
     onSuccess: (data) => {
-      localStorage.setItem("token", data.token);
+      // Save token
+      saveToken(data.token);
+      localStorage.setItem("username", data.user.name || data.user.email);
+
       toast.success("Login berhasil!");
+
       setTimeout(() => {
         router.push("/dashboard");
-      }, 300);
+      }, 500);
     },
 
     onError: (err: any) => {
-      toast.error(err.message || "Login gagal. Coba lagi.");
+      const errorMessage =
+        err.response?.data?.message || "Login gagal. Coba lagi.";
+      toast.error(errorMessage);
     },
   });
 
@@ -68,14 +67,17 @@ export default function LoginPage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <InputField
               control={form.control}
-              name="username"
-              label="Username"
+              name="email"
+              label="Email"
+              placeholder="Masukkan email"
+              type="email"
             />
 
             <PasswordInput
               control={form.control}
               name="password"
               label="Password"
+              placeholder="Masukkan password"
             />
 
             <Button
@@ -86,8 +88,9 @@ export default function LoginPage() {
               {mutation.isPending ? "Memproses..." : "Login"}
             </Button>
           </form>
+
           <p
-            className="text-sm text-center mt-2 text-blue-600 underline cursor-pointer"
+            className="text-sm text-center mt-4 text-blue-600 underline cursor-pointer"
             onClick={() => router.push("/register")}
           >
             Belum punya akun? Daftar!
