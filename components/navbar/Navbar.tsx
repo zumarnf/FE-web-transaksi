@@ -10,7 +10,7 @@ import { ShoppingCart, Package } from "lucide-react";
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
-  const [cartCount, setCartCount] = useState(0); // ⬅️ State untuk jumlah item
+  const [cartCount, setCartCount] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -27,11 +27,10 @@ export function Navbar() {
 
   const handleLogout = async () => {
     try {
-      await authAPI.logoutAPI(); // Optional: hit API
+      await authAPI.logoutAPI();
     } catch (error) {
-      // Ignore API error
     } finally {
-      logout(); // Hapus token & redirect
+      logout();
     }
   };
 
@@ -49,7 +48,6 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-6">
-          {/* Cart with Badge */}
           <Link
             href="/dashboard/cart"
             className="relative flex items-center gap-2 text-neutral-800 hover:text-neutral-600 transition-colors"

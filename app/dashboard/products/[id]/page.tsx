@@ -16,7 +16,6 @@ export default function ProductDetailPage() {
   const params = useParams();
   const [quantity, setQuantity] = useState(1);
 
-  // Fetch product detail
   const {
     data: product,
     isLoading,
@@ -24,13 +23,11 @@ export default function ProductDetailPage() {
   } = useQuery<Product>({
     queryKey: ["product", params.id],
     queryFn: async () => {
-      // ✅ FIX: Fetch dari API
       const res = await productsAPI.getById(params.id as string);
       return res.data;
     },
   });
 
-  // Format price
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -56,10 +53,8 @@ export default function ProductDetailPage() {
     localStorage.setItem("cart", JSON.stringify(cart));
     toast.success(`${quantity}x ${product.name} ditambahkan ke keranjang!`);
 
-    // Trigger cart update event
     window.dispatchEvent(new Event("cartUpdated"));
 
-    // Redirect to cart after 500ms
     setTimeout(() => router.push("/dashboard/cart"), 500);
   };
 
@@ -97,7 +92,6 @@ export default function ProductDetailPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Back Button */}
       <Button
         variant="ghost"
         className="mb-4 mt-6"
@@ -126,19 +120,15 @@ export default function ProductDetailPage() {
           </Card>
         </div>
 
-        {/* Product Info */}
         <div className="space-y-6">
-          {/* Category Badge */}
           {product.category && (
             <Badge variant="secondary" className="text-sm">
               {product.category.name}
             </Badge>
           )}
 
-          {/* Product Name */}
           <h1 className="text-3xl font-bold">{product.name}</h1>
 
-          {/* Stock Info */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Package className="w-5 h-5 text-gray-500" />
@@ -150,14 +140,12 @@ export default function ProductDetailPage() {
             {product.stock === 0 && <Badge variant="destructive">Habis</Badge>}
           </div>
 
-          {/* Price */}
           <div className="border-y py-4">
             <div className="text-3xl font-bold text-amber-600">
               {formatPrice(product.price)}
             </div>
           </div>
 
-          {/* Description */}
           <div>
             <h3 className="font-semibold mb-2 text-lg">Deskripsi Produk</h3>
             <p className="text-gray-700 leading-relaxed">
@@ -165,7 +153,6 @@ export default function ProductDetailPage() {
             </p>
           </div>
 
-          {/* Total Price */}
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Total Harga:</span>

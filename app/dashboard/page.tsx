@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Product } from "@/types";
-import { ProductCard } from "@/components/products/ProductCard";
+import {
+  ProductCard,
+  ProductCardSkeleton,
+} from "@/components/products/ProductCard";
+import { productsAPI } from "@/lib/api";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -14,94 +17,19 @@ export default function DashboardPage() {
   const [username, setUsername] = useState("");
 
   useEffect(() => {
-    // Ambil user info dari localStorage (sementara)
+    // Ambil user info dari localStorage
     const user = localStorage.getItem("username");
     if (user) setUsername(user);
   }, []);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["products"],
+    queryKey: ["featured-products"],
     queryFn: async () => {
-      return {
-        data: [
-          {
-            id: 1,
-            category_id: 1,
-            name: "Laptop Gaming ROG",
-            image:
-              "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=500",
-            description:
-              "Laptop gaming dengan spesifikasi tinggi untuk performa maksimal",
-            price: 15000000,
-            stock: 5,
-            category: { id: 1, name: "Electronics" },
-          },
-          {
-            id: 2,
-            category_id: 1,
-            name: "Mechanical Keyboard RGB",
-            image:
-              "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=500",
-            description:
-              "Keyboard mechanical dengan RGB lighting yang dapat dikustomisasi",
-            price: 1250000,
-            stock: 15,
-            category: { id: 1, name: "Electronics" },
-          },
-          {
-            id: 3,
-            category_id: 2,
-            name: "Tas Gaming",
-            image:
-              "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=500",
-            description:
-              "Tas gaming dengan desain yang menarik dan spesifikasi tinggi untuk performa maksimal",
-            price: 15000000,
-            stock: 5,
-            category: { id: 1, name: "Electronics" },
-          },
-          {
-            id: 4,
-            category_id: 2,
-            name: "Mouse Gaming",
-            image:
-              "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=500",
-            description:
-              "Mouse gaming dengan desain yang menarik dan spesifikasi tinggi untuk performa maksimal",
-            price: 15000000,
-            stock: 5,
-            category: { id: 1, name: "Electronics" },
-          },
-          {
-            id: 5,
-            category_id: 2,
-            name: "Headset Gaming",
-            image:
-              "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=500",
-            description:
-              "Headset gaming dengan desain yang menarik dan spesifikasi tinggi untuk performa maksimal",
-            price: 15000000,
-            stock: 5,
-            category: { id: 1, name: "Electronics" },
-          },
-          {
-            id: 6,
-            category_id: 2,
-            name: "Monitor Gaming",
-            image:
-              "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=500",
-            description:
-              "Monitor gaming dengan desain yang menarik dan spesifikasi tinggi untuk performa maksimal",
-            price: 15000000,
-            stock: 5,
-            category: { id: 1, name: "Electronics" },
-          },
-        ],
-      };
+      return await productsAPI.getAll();
     },
   });
 
-  let products: Product[] = data?.data || [];
+  const products: Product[] = (data?.data?.data || []).slice(0, 6);
 
   const HeroImage = () => {
     return (
@@ -113,7 +41,7 @@ export default function DashboardPage() {
           fill
           className="object-cover bg-linear-to-l from-primary to-secondary w-full"
         />
-        <div className="absolute inset-0 bg-linear-to-r from-20% from-secondary to-transparent w-full h-full"></div>
+        <div className="absolute inset-0 bg-linear-to-r from-black/60 to-transparent w-full h-full"></div>
       </div>
     );
   };
@@ -123,34 +51,56 @@ export default function DashboardPage() {
       <section className="relative w-full min-h-[400px] flex flex-col justify-center">
         <HeroImage />
 
-        {/* container hanya untuk teks */}
-        <div className="container mx-auto px-4 py-20">
-          <h1 className="text-5xl font-bold leading-16">
+        <div className="container mx-auto px-4 py-20 relative z-10">
+          <h1 className="text-5xl font-bold leading-tight text-white">
             Selamat Datang,
             <br />
-            <span className="text-amber-400">Pelanggan</span>
+            <span className="text-amber-400">{username || "Pelanggan"}</span>
           </h1>
+          <p className="text-white/90 mt-4 text-lg max-w-xl">
+            Temukan produk terbaik dengan harga terjangkau
+          </p>
         </div>
       </section>
 
-      {/* Featured Products Grid */}
-      <div className="px-20">
+      <div className="px-4 md:px-20">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold mb-4">Produk Pilihan</h2>
+          <h2 className="text-2xl font-bold">Produk Pilihan</h2>
           <Link
             href="/dashboard/products"
-            className="text-blue-600 hover:text-blue-800 transition-colors"
+            className="text-amber-600 hover:text-amber-700 font-medium transition-colors"
           >
-            Lihat Semua
+            Lihat Semua →
           </Link>
         </div>
-        <div>
+
+        {isLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-red-500 mb-4">Gagal memuat produk</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+            >
+              Coba Lagi
+            </button>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600 mb-4">Belum ada produk tersedia</p>
+          </div>
+        ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -8,44 +8,71 @@ import { Badge } from "@/components/ui/badge";
 import { Package, Calendar, ChevronRight, ShoppingBag } from "lucide-react";
 import { transactionsAPI } from "@/lib/api";
 
-interface TransactionItem {
+interface TransactionDetail {
+  id: number;
+  transaction_id: number;
   product_id: number;
   quantity: number;
-  price: number;
+  price_per_item: string;
+  subtotal: string;
+  product?: {
+    id: number;
+    name: string;
+    price: string;
+    image?: string;
+  };
 }
 
 interface Transaction {
   id: number;
   user_id: number;
-  total: number;
-  items: TransactionItem[];
+  total_price: string;
   status: string;
+  payment_proof: string | null;
   created_at: string;
+  updated_at: string;
+  details: TransactionDetail[];
 }
 
 export default function TransactionsPage() {
   const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadTransactions();
   }, []);
 
   const loadTransactions = async () => {
+    setIsLoading(true);
     try {
       const { data } = await transactionsAPI.getAll();
-      setTransactions(data.data || []);
+
+      console.log("Transactions Response:", data);
+
+      const transactionsData = data?.data || [];
+      setTransactions(transactionsData);
     } catch (error) {
       console.error("Failed to load transactions:", error);
+      setTransactions([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | string) => {
+    const numPrice = typeof price === "string" ? parseFloat(price) : price;
+
+    if (isNaN(numPrice)) {
+      console.error("Invalid price:", price);
+      return "Rp0";
+    }
+
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
-    }).format(price);
+    }).format(numPrice);
   };
 
   const formatDate = (dateString: string) => {
@@ -60,38 +87,43 @@ export default function TransactionsPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<
-      string,
-      {
-        label: string;
-        variant: "default" | "secondary" | "destructive" | "outline";
-      }
-    > = {
-      success: { label: "Berhasil", variant: "default" },
-      pending: { label: "Menunggu", variant: "secondary" },
-      failed: { label: "Gagal", variant: "destructive" },
+    const statusConfig: Record<string, { label: string; className: string }> = {
+      pending: { label: "Sukses", className: "bg-green-500 text-white" },
+      paid: { label: "Dibayar", className: "bg-green-500 text-white" },
+      cancelled: { label: "Dibatalkan", className: "bg-red-500 text-white" },
+      waiting_verification: {
+        label: "Menunggu Verifikasi",
+        className: "bg-orange-500 text-white",
+      },
     };
 
     const config = statusConfig[status] || {
       label: status,
-      variant: "outline",
+      className: "bg-gray-500 text-white",
     };
 
+    return <Badge className={config.className}>{config.label}</Badge>;
+  };
+
+  const getTotalItems = (details: TransactionDetail[]) => {
+    if (!details || !Array.isArray(details)) {
+      console.warn("Invalid details:", details);
+      return 0;
+    }
+    return details.reduce((total, item) => total + (item.quantity || 0), 0);
+  };
+
+  if (isLoading) {
     return (
-      <Badge
-        variant={config.variant}
-        className={status === "success" ? "bg-green-500" : ""}
-      >
-        {config.label}
-      </Badge>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4" />
+          <p className="text-gray-600">Memuat transaksi...</p>
+        </div>
+      </div>
     );
-  };
+  }
 
-  const getTotalItems = (items: TransactionItem[]) => {
-    return items.reduce((total, item) => total + item.quantity, 0);
-  };
-
-  // Empty state
   if (transactions.length === 0) {
     return (
       <div className="max-w-4xl mx-auto">
@@ -115,14 +147,14 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="max-w-full px-20 pt-10 mx-auto">
-      {/* Header */}
+    <div className="max-w-5xl mx-auto">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Riwayat Transaksi</h1>
-        <p className="text-gray-600">Total {transactions.length} Transaksi</p>
+        <p className="text-gray-600">
+          {transactions.length} transaksi ditemukan
+        </p>
       </div>
 
-      {/* Transactions List */}
       <div className="space-y-4">
         {transactions.map((transaction) => (
           <Card
@@ -153,24 +185,22 @@ export default function TransactionsPage() {
               </div>
             </div>
 
-            {/* Transaction Info */}
             <div className="flex items-center justify-between py-4 border-t border-b">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Total Produk</p>
                 <p className="font-semibold">
-                  {getTotalItems(transaction.items)} item
+                  {getTotalItems(transaction.details)} item
                 </p>
               </div>
 
               <div className="text-right">
                 <p className="text-sm text-gray-600 mb-1">Total Pembayaran</p>
                 <p className="text-xl font-bold text-amber-600">
-                  {formatPrice(transaction.total)}
+                  {formatPrice(transaction.total_price)}
                 </p>
               </div>
             </div>
 
-            {/* Action */}
             <div className="flex justify-end mt-4">
               <Button
                 variant="ghost"
@@ -188,7 +218,6 @@ export default function TransactionsPage() {
         ))}
       </div>
 
-      {/* Back to Products */}
       <div className="mt-8 text-center">
         <Button
           variant="outline"
