@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Product } from "@/types";
 import {
@@ -10,10 +9,10 @@ import {
 } from "@/components/products/ProductCard";
 import { productsAPI } from "@/lib/api";
 import Link from "next/link";
-import Image from "next/image";
+import { HeroImage } from "@/components/dashboard/HeroImage";
+import { TextHero } from "@/components/dashboard/TextHero";
 
 export default function DashboardPage() {
-  const router = useRouter();
   const [username, setUsername] = useState("");
 
   useEffect(() => {
@@ -31,36 +30,11 @@ export default function DashboardPage() {
 
   const products: Product[] = (data?.data?.data || []).slice(0, 6);
 
-  const HeroImage = () => {
-    return (
-      <div className="w-full h-full absolute inset-0 -z-10">
-        <Image
-          src="https://images.unsplash.com/photo-1574901200090-ca061722bdb9?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-          unoptimized
-          alt="HeroImage"
-          fill
-          className="object-cover bg-linear-to-l from-primary to-secondary w-full"
-        />
-        <div className="absolute inset-0 bg-linear-to-r from-black/60 to-transparent w-full h-full"></div>
-      </div>
-    );
-  };
-
   return (
     <div className="space-y-6">
       <section className="relative w-full min-h-[400px] flex flex-col justify-center">
         <HeroImage />
-
-        <div className="container mx-auto px-4 py-20 relative z-10">
-          <h1 className="text-5xl font-bold leading-tight text-white">
-            Selamat Datang,
-            <br />
-            <span className="text-amber-400">{username || "Pelanggan"}</span>
-          </h1>
-          <p className="text-white/90 mt-4 text-lg max-w-xl">
-            Temukan produk terbaik dengan harga terjangkau
-          </p>
-        </div>
+        <TextHero username={username} />
       </section>
 
       <div className="px-4 md:px-20">

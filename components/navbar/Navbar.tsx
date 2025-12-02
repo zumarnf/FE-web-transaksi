@@ -7,11 +7,14 @@ import { useRouter } from "next/navigation";
 import { Button } from "../ui/button";
 import { logout } from "@/lib/auth";
 import { ShoppingCart, Package } from "lucide-react";
+import { useCartStore } from "@/lib/userCartStore"; // 🔥 Import Zustand store
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
   const router = useRouter();
+
+  // 🔥 Ambil totalItems dari Zustand store (REACTIVE!)
+  const totalItems = useCartStore((state) => state.totalItems());
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 0);
@@ -19,16 +22,11 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // ⬅️ Load cart count dari localStorage
-  useEffect(() => {
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-    setCartCount(cart.length);
-  }, []);
-
   const handleLogout = async () => {
     try {
       await authAPI.logoutAPI();
     } catch (error) {
+      console.error(error);
     } finally {
       logout();
     }
@@ -54,9 +52,11 @@ export function Navbar() {
           >
             <ShoppingCart className="w-5 h-5" />
             <span className="hidden sm:inline">Keranjang</span>
-            {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {cartCount}
+
+            {/* 🔥 Pakai totalItems dari Zustand */}
+            {totalItems > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
+                {totalItems}
               </span>
             )}
           </Link>

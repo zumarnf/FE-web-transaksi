@@ -4,42 +4,48 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Package } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { Product } from "@/types";
+import { useCartStore } from "@/lib/userCartStore"; // 🔥 Import Zustand store
 
 interface ProductCardProps {
   product: Product;
-  onAddToCart?: (product: Product) => void;
   showAddToCart?: boolean;
 }
 
 export function ProductCard({
   product,
-  onAddToCart,
   showAddToCart = true,
 }: ProductCardProps) {
   const router = useRouter();
 
+  // 🔥 Ambil addItem dari Zustand store
+  const addItem = useCartStore((state) => state.addItem);
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    if (onAddToCart) {
-      onAddToCart(product);
-    } else {
-      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-      const existingItem = cart.find((item: any) => item.id === product.id);
+    // 🔥 Cek stock dulu
+    if (product.stock <= 0) {
+      toast.error(`${product.name} sedang habis!`);
+      return;
+    }
 
-      if (existingItem) {
-        existingItem.quantity += 1;
-        toast.success(`Jumlah ${product.name} ditambahkan!`);
-      } else {
-        cart.push({ ...product, quantity: 1 });
-        toast.success(`${product.name} ditambahkan ke keranjang!`);
-      }
+    try {
+      addItem({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        stock: product.stock,
+        image: product.image,
+        category: product.category,
+      });
 
-      localStorage.setItem("cart", JSON.stringify(cart));
-      window.dispatchEvent(new Event("cartUpdated"));
+      toast.success(`${product.name} ditambahkan ke keranjang!`);
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      toast.error("Gagal menambahkan ke keranjang");
     }
   };
 
@@ -72,7 +78,6 @@ export function ProductCard({
           }}
         />
 
-        {/* Badges */}
         <div className="absolute top-2 left-2 right-2 flex justify-between items-start gap-1">
           {product.category && (
             <Badge

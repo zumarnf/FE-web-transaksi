@@ -3,10 +3,10 @@ export interface Product {
   category_id: number;
   name: string;
   image: string;
+  // image_url?: string;
   description: string;
   price: number;
   stock: number;
-  image_url?: string;
   category?: Category;
   created_at?: string;
   updated_at?: string;
