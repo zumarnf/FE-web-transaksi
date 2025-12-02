@@ -79,7 +79,6 @@ function transformLaravelProduct(product: any) {
     category: product.category,
   };
 }
-
 // ========================================
 // AUTH API
 // ========================================
@@ -146,11 +145,7 @@ export const productsAPI = {
     const response = await api.get("/product");
 
     const products = response.data.data
-      .filter(
-        (p: any) =>
-          p.name.toLowerCase().includes(query.toLowerCase()) ||
-          p.description?.toLowerCase().includes(query.toLowerCase())
-      )
+      .filter((p: any) => p.name.toLowerCase().includes(query.toLowerCase()))
       .map(transformLaravelProduct);
 
     return {
@@ -191,80 +186,6 @@ export const categoriesAPI = {
         data: response.data.data,
       },
     };
-  },
-};
-
-// ========================================
-// CART API (LocalStorage based)
-// ========================================
-
-export const cartAPI = {
-  getCart: () => {
-    if (typeof window === "undefined") return [];
-    const cart = localStorage.getItem("cart");
-    return cart ? JSON.parse(cart) : [];
-  },
-
-  saveCart: (items: any[]) => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("cart", JSON.stringify(items));
-      window.dispatchEvent(new Event("cartUpdated"));
-    }
-  },
-
-  addItem: (product: any, quantity: number = 1) => {
-    const cart = cartAPI.getCart();
-    const existingItem = cart.find((item: any) => item.id === product.id);
-
-    if (existingItem) {
-      existingItem.quantity += quantity;
-    } else {
-      cart.push({ ...product, quantity });
-    }
-
-    cartAPI.saveCart(cart);
-    return cart;
-  },
-
-  updateQuantity: (productId: number, quantity: number) => {
-    const cart = cartAPI.getCart();
-    const item = cart.find((item: any) => item.id === productId);
-
-    if (item) {
-      item.quantity = quantity;
-      if (item.quantity <= 0) {
-        return cartAPI.removeItem(productId);
-      }
-      cartAPI.saveCart(cart);
-    }
-
-    return cart;
-  },
-
-  removeItem: (productId: number) => {
-    const cart = cartAPI.getCart();
-    const filtered = cart.filter((item: any) => item.id !== productId);
-    cartAPI.saveCart(filtered);
-    return filtered;
-  },
-
-  clearCart: () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("cart");
-      window.dispatchEvent(new Event("cartUpdated"));
-    }
-  },
-
-  getTotal: () => {
-    const cart = cartAPI.getCart();
-    return cart.reduce((total: number, item: any) => {
-      return total + item.price * item.quantity;
-    }, 0);
-  },
-
-  getItemCount: () => {
-    const cart = cartAPI.getCart();
-    return cart.reduce((count: number, item: any) => count + item.quantity, 0);
   },
 };
 
