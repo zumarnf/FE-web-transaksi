@@ -1,18 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
-import { productsAPI } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
-import { Product } from "@/types";
 import { useCartStore } from "@/lib/userCartStore";
 import { ProductDetailErr } from "@/components/products/ProductDetailErr";
 import { ProductDesc } from "@/components/products/ProductDesc";
 import { Loading } from "@/components/ui/loading";
+import { useProduct } from "@/lib/useProducts";
 
 export default function ProductDetailPage() {
   const router = useRouter();
@@ -21,17 +19,8 @@ export default function ProductDetailPage() {
 
   const addItem = useCartStore((state) => state.addItem);
 
-  const {
-    data: product,
-    isLoading,
-    error,
-  } = useQuery<Product>({
-    queryKey: ["product", params.id],
-    queryFn: async () => {
-      const res = await productsAPI.getById(params.id as string);
-      return res.data;
-    },
-  });
+  // ✅ Pakai custom hook dengan caching otomatis
+  const { data: product, isLoading, error } = useProduct(params.id as string);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {

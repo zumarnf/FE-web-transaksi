@@ -1,20 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  ArrowLeft,
-  Calendar,
-  Package,
-  Download,
-  ShoppingBag,
-} from "lucide-react";
-import { transactionsAPI } from "@/lib/api";
+import { ArrowLeft, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
+import { useTransaction } from "@/lib/useProducts";
+import { TransactionHeader } from "@/components/transactions/TransactionHeader";
+import { TransactionInfoDate } from "@/components/transactions/TransactionInfoDate";
 
 interface TransactionDetail {
   id: number;
@@ -31,48 +25,16 @@ interface TransactionDetail {
   };
 }
 
-interface Transaction {
-  id: number;
-  user_id: number;
-  total_price: string;
-  status: string;
-  payment_proof: string | null;
-  created_at: string;
-  updated_at: string;
-  details: TransactionDetail[];
-}
-
 export default function TransactionDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const [transaction, setTransaction] = useState<Transaction | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadTransaction();
-  }, [params.id]);
-
-  const loadTransaction = async () => {
-    setIsLoading(true);
-    try {
-      const { data } = await transactionsAPI.getById(params.id as string);
-
-      console.log("Transaction Detail:", data);
-
-      if (!data) {
-        toast.error("Transaksi tidak ditemukan");
-        setTransaction(null);
-      } else {
-        setTransaction(data);
-      }
-    } catch (error: any) {
-      console.error("Failed to load transaction:", error);
-      toast.error("Gagal memuat detail transaksi");
-      setTransaction(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // ✅ Pakai custom hook dengan caching
+  const {
+    data: transaction,
+    isLoading,
+    error,
+  } = useTransaction(params.id as string);
 
   const formatPrice = (price: number | string) => {
     const numPrice = typeof price === "string" ? parseFloat(price) : price;
@@ -87,41 +49,6 @@ export default function TransactionDetailPage() {
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(numPrice);
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("id-ID", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; className: string }> = {
-      pending: { label: "Sukses", className: "bg-green-500 text-white" },
-      paid: { label: "Dibayar", className: "bg-green-500 text-white" },
-      cancelled: { label: "Dibatalkan", className: "bg-red-500 text-white" },
-      waiting_verification: {
-        label: "Menunggu Verifikasi",
-        className: "bg-orange-500 text-white",
-      },
-    };
-
-    const config = statusConfig[status] || {
-      label: status,
-      className: "bg-gray-500 text-white",
-    };
-
-    return <Badge className={config.className}>{config.label}</Badge>;
-  };
-
-  const getTotalItems = (details: TransactionDetail[]) => {
-    if (!details || !Array.isArray(details)) return 0;
-    return details.reduce((total, item) => total + (item.quantity || 0), 0);
   };
 
   const handleDownloadInvoice = () => {
@@ -139,7 +66,7 @@ export default function TransactionDetailPage() {
     );
   }
 
-  if (!transaction) {
+  if (error || !transaction) {
     return (
       <div className="max-w-4xl mx-auto text-center py-16">
         <div className="text-6xl mb-4">😢</div>
@@ -158,57 +85,13 @@ export default function TransactionDetailPage() {
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={() => router.push("/dashboard/transactions")}
-          className="mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Kembali
-        </Button>
-
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Detail Transaksi</h1>
-            <p className="text-gray-600">Order #{transaction.id}</p>
-          </div>
-          <Button variant="outline" onClick={handleDownloadInvoice}>
-            <Download className="w-4 h-4 mr-2" />
-            Download Invoice
-          </Button>
-        </div>
-      </div>
+      <TransactionHeader
+        transaction={transaction}
+        handleDownloadInvoice={handleDownloadInvoice}
+      />
 
       {/* Transaction Info Card */}
-      <Card className="p-6 mb-6">
-        <div className="grid md:grid-cols-3 gap-6">
-          <div>
-            <p className="text-sm text-gray-600 mb-2">Status Pesanan</p>
-            {getStatusBadge(transaction.status)}
-          </div>
-
-          <div>
-            <p className="text-sm text-gray-600 mb-2">Tanggal Transaksi</p>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <p className="font-medium">
-                {formatDate(transaction.created_at)}
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-sm text-gray-600 mb-2">Total Item</p>
-            <div className="flex items-center gap-2">
-              <Package className="w-4 h-4 text-gray-500" />
-              <p className="font-medium">
-                {getTotalItems(transaction.details)} produk
-              </p>
-            </div>
-          </div>
-        </div>
-      </Card>
+      <TransactionInfoDate transaction={transaction} />
 
       {/* Items List */}
       <Card className="p-6 mb-6">
@@ -216,27 +99,29 @@ export default function TransactionDetailPage() {
 
         <div className="space-y-4">
           {transaction.details && transaction.details.length > 0 ? (
-            transaction.details.map((item, index) => (
-              <div key={index}>
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <p className="font-medium">
-                      {item.product?.name || `Produk ID: ${item.product_id}`}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Jumlah: {item.quantity} x{" "}
-                      {formatPrice(item.price_per_item)}
+            transaction.details.map(
+              (item: TransactionDetail, index: number) => (
+                <div key={index}>
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <p className="font-medium">
+                        {item.product?.name || `Produk ID: ${item.product_id}`}
+                      </p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Jumlah: {item.quantity} x{" "}
+                        {formatPrice(item.price_per_item)}
+                      </p>
+                    </div>
+                    <p className="font-bold text-amber-600">
+                      {formatPrice(item.subtotal)}
                     </p>
                   </div>
-                  <p className="font-bold text-amber-600">
-                    {formatPrice(item.subtotal)}
-                  </p>
+                  {index < transaction.details.length - 1 && (
+                    <Separator className="mt-4" />
+                  )}
                 </div>
-                {index < transaction.details.length - 1 && (
-                  <Separator className="mt-4" />
-                )}
-              </div>
-            ))
+              )
+            )
           ) : (
             <p className="text-center text-gray-500 py-4">
               Tidak ada detail produk

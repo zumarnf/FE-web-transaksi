@@ -1,24 +1,25 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { transactionsAPI } from "@/lib/api";
 import { CartNull } from "@/components/cart/CartNull";
 import { CartItem } from "@/components/cart/CartItem";
 import { CartCheckout } from "@/components/cart/CartCheckout";
 import { CartHeader } from "@/components/cart/CartHeader";
 import { useCartStore } from "@/lib/userCartStore";
+import { useCreateTransaction } from "@/lib/useProducts";
 
 export default function CartPage() {
   const router = useRouter();
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  // Ambil semua dari Zustand store
+  // ✅ Zustand untuk cart state (tetap pakai Zustand untuk client-side state)
   const items = useCartStore((state) => state.items);
   const totalItems = useCartStore((state) => state.totalItems());
   const subtotal = useCartStore((state) => state.subtotal());
   const clearCart = useCartStore((state) => state.clearCart);
+
+  // ✅ TanStack Query mutation untuk checkout
+  const createTransaction = useCreateTransaction();
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -41,8 +42,6 @@ export default function CartPage() {
       return;
     }
 
-    setIsCheckingOut(true);
-
     try {
       // Format data untuk Laravel
       const cartItems = items.map((item) => ({
@@ -50,18 +49,19 @@ export default function CartPage() {
         quantity: item.quantity,
       }));
 
-      await transactionsAPI.create({ items: cartItems });
+      // ✅ Pakai mutation dengan auto invalidation & optimistic update
+      await createTransaction.mutateAsync({ items: cartItems });
 
       toast.success("Pesanan berhasil dibuat!");
       clearCart();
 
+      // ✅ Redirect setelah success
       setTimeout(() => {
         router.push("/dashboard/transactions");
       }, 1000);
     } catch (error: any) {
+      // ✅ Error handling otomatis dari mutation
       toast.error(error.response?.data?.message || "Gagal membuat pesanan");
-    } finally {
-      setIsCheckingOut(false);
     }
   };
 
@@ -85,7 +85,7 @@ export default function CartPage() {
             subtotal={subtotal}
             handleCheckout={handleCheckout}
             formatPrice={formatPrice}
-            isCheckingOut={isCheckingOut}
+            isCheckingOut={createTransaction.isPending}
           />
         </div>
       </div>

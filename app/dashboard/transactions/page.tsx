@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Package, Calendar, ChevronRight, ShoppingBag } from "lucide-react";
-import { transactionsAPI } from "@/lib/api";
+import { useTransactions } from "@/lib/useProducts";
 
 interface TransactionDetail {
   id: number;
@@ -36,29 +35,11 @@ interface Transaction {
 
 export default function TransactionsPage() {
   const router = useRouter();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadTransactions();
-  }, []);
+  // ✅ Pakai custom hook dengan auto-refetch setiap 1 menit
+  const { data, isLoading, error } = useTransactions();
 
-  const loadTransactions = async () => {
-    setIsLoading(true);
-    try {
-      const { data } = await transactionsAPI.getAll();
-
-      console.log("Transactions Response:", data);
-
-      const transactionsData = data?.data || [];
-      setTransactions(transactionsData);
-    } catch (error) {
-      console.error("Failed to load transactions:", error);
-      setTransactions([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const transactions: Transaction[] = data?.data || [];
 
   const formatPrice = (price: number | string) => {
     const numPrice = typeof price === "string" ? parseFloat(price) : price;
@@ -120,6 +101,19 @@ export default function TransactionsPage() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4" />
           <p className="text-gray-600">Memuat transaksi...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto text-center py-16">
+        <div className="text-6xl mb-4">⚠️</div>
+        <h2 className="text-2xl font-bold mb-2">Gagal Memuat Transaksi</h2>
+        <p className="text-gray-600 mb-6">
+          Terjadi kesalahan saat memuat data.
+        </p>
+        <Button onClick={() => window.location.reload()}>Coba Lagi</Button>
       </div>
     );
   }
