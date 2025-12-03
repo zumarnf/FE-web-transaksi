@@ -1,16 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Product } from "@/types";
 import {
   ProductCard,
   ProductCardSkeleton,
 } from "@/components/products/ProductCard";
-import { productsAPI } from "@/lib/api";
 import Link from "next/link";
 import { HeroImage } from "@/components/dashboard/HeroImage";
 import { TextHero } from "@/components/dashboard/TextHero";
+import { useProducts } from "@/lib/useProducts";
 
 export default function DashboardPage() {
   const [username, setUsername] = useState("");
@@ -21,14 +20,11 @@ export default function DashboardPage() {
     if (user) setUsername(user);
   }, []);
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["featured-products"],
-    queryFn: async () => {
-      return await productsAPI.getAll();
-    },
-  });
+  // ✅ Pakai custom hook dengan caching otomatis
+  const { data, isLoading, error } = useProducts({ limit: 6 });
 
-  const products: Product[] = (data?.data?.data || []).slice(0, 6);
+  // ✅ Data sudah di-transform di hook, langsung pakai
+  const products: Product[] = (data?.data || []).slice(0, 6);
 
   return (
     <div className="space-y-6">

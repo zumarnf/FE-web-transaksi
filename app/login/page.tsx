@@ -1,23 +1,20 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
-import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
-
 import { InputField } from "@/components/form/InputField";
 import { PasswordInput } from "@/components/form/PasswordInput";
 import { LoginSchema, loginSchema } from "@/validators/loginSchema";
-import { authAPI } from "@/lib/api";
 import { saveToken } from "@/lib/auth";
+import { useLogin } from "@/lib/useProducts";
 
 export default function LoginPage() {
   const router = useRouter();
+  const login = useLogin();
 
   const form = useForm<LoginSchema>({
     resolver: zodResolver(loginSchema),
@@ -27,33 +24,23 @@ export default function LoginPage() {
     },
   });
 
-  const mutation = useMutation({
-    mutationFn: async (values: LoginSchema) => {
-      const res = await authAPI.login(values);
-      return res.data;
-    },
+  const onSubmit = (values: LoginSchema) => {
+    login.mutate(values, {
+      onSuccess: (res) => {
+        saveToken(res.data.token);
+        localStorage.setItem(
+          "username",
+          res.data.user.name || res.data.user.email
+        );
 
-    onSuccess: (data) => {
-      // Save token
-      saveToken(data.token);
-      localStorage.setItem("username", data.user.name || data.user.email);
-
-      toast.success("Login berhasil!");
-
-      setTimeout(() => {
+        toast.success("Login berhasil!");
         router.push("/dashboard");
-      }, 500);
-    },
+      },
 
-    onError: (err: any) => {
-      const errorMessage =
-        err.response?.data?.message || "Login gagal. Coba lagi.";
-      toast.error(errorMessage);
-    },
-  });
-
-  const onSubmit = (values: z.infer<typeof loginSchema>) => {
-    mutation.mutate(values);
+      onError: (err: any) => {
+        toast.error(err.response?.data?.message || "Login gagal. Coba lagi.");
+      },
+    });
   };
 
   return (
@@ -80,12 +67,8 @@ export default function LoginPage() {
               placeholder="Masukkan password"
             />
 
-            <Button
-              type="submit"
-              disabled={mutation.isPending}
-              className="w-full"
-            >
-              {mutation.isPending ? "Memproses..." : "Login"}
+            <Button type="submit" disabled={login.isPending} className="w-full">
+              {login.isPending ? "Memproses..." : "Login"}
             </Button>
           </form>
 

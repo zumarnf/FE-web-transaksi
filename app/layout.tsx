@@ -16,7 +16,6 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Providers>{children}</Providers>
-        {/* Toaster harus ada di root agar toast muncul */}
         <Toaster position="top-right" />
       </body>
     </html>
