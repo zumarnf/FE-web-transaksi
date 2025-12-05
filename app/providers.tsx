@@ -11,11 +11,11 @@ export default function Providers({ children }: { children: ReactNode }) {
         defaultOptions: {
           queries: {
             // ✅ Global defaults untuk semua queries
-            staleTime: 60 * 1000, // 1 minute - data dianggap fresh
-            gcTime: 5 * 60 * 1000, // 5 minutes - cache duration (dulu cacheTime)
-            retry: 1, // Retry 1x jika gagal
-            refetchOnWindowFocus: false, // Jangan refetch saat focus window
-            refetchOnReconnect: true, // Refetch saat internet reconnect
+            staleTime: 60 * 1000,
+            gcTime: 5 * 60 * 1000,
+            retry: 1,
+            refetchOnWindowFocus: false,
+            refetchOnReconnect: true,
           },
           mutations: {
             // ✅ Global defaults untuk semua mutations

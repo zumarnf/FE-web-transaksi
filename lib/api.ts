@@ -52,33 +52,68 @@ export function attachAuth(token?: string) {
   }
 }
 
-function transformLaravelProduct(product: any) {
+// ✅ Helper untuk transform image URL
+function transformImageUrl(
+  imagePath: string | null,
+  isPaymentProof = false
+): string {
   const baseURL =
     process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") ||
     "http://localhost:8000";
 
-  // Build image URL
-  let imageUrl = "https://placehold.co/400x400/f3f4f6/9ca3af?text=No+Image";
-
-  if (product.image) {
-    if (product.image.startsWith("http")) {
-      imageUrl = product.image;
-    } else {
-      imageUrl = `${baseURL}/storage/${product.image}`;
-    }
+  if (!imagePath) {
+    return "https://placehold.co/400x400/f3f4f6/9ca3af?text=No+Image";
   }
 
+  if (imagePath.startsWith("http")) {
+    return imagePath;
+  }
+
+  // ✅ Payment proof perlu ditambahkan prefix "paymentproof/"
+  if (isPaymentProof) {
+    // Cek apakah sudah ada "paymentproof/" di path
+    const hasPrefix = imagePath.startsWith("payment_proofs/");
+    return hasPrefix
+      ? `${baseURL}/storage/${imagePath}`
+      : `${baseURL}/storage/payment_proofs/${imagePath}`;
+  }
+
+  return `${baseURL}/storage/${imagePath}`;
+}
+
+function transformLaravelProduct(product: any) {
   return {
     id: product.id,
     category_id: product.category_id,
     name: product.name,
-    image: imageUrl,
+    image: transformImageUrl(product.image),
     description: product.description,
     price: parseFloat(product.price),
     stock: product.stock,
     category: product.category,
   };
 }
+
+// ✅ Helper untuk transform transaction dengan payment proof URL
+function transformTransaction(transaction: any) {
+  return {
+    ...transaction,
+    payment_proof: transaction.payment_proof
+      ? transformImageUrl(transaction.payment_proof, true) // ✅ Pass true untuk payment proof
+      : null,
+    // Transform nested items jika ada
+    items: transaction.items?.map((item: any) => ({
+      ...item,
+      product: item.product
+        ? {
+            ...item.product,
+            image: transformImageUrl(item.product.image, false),
+          }
+        : null,
+    })),
+  };
+}
+
 // ========================================
 // AUTH API
 // ========================================
@@ -118,7 +153,6 @@ export const productsAPI = {
   getAll: async (params?: { limit?: number; skip?: number }) => {
     const response = await api.get("/product");
 
-    // Transform products
     const products = response.data.data.map(transformLaravelProduct);
 
     return {
@@ -207,9 +241,14 @@ export const transactionsAPI = {
 
       console.log("Transactions API Response:", response.data);
 
+      // ✅ Transform semua transactions untuk fix payment_proof URL
+      const transformedTransactions = (response.data.data || []).map(
+        transformTransaction
+      );
+
       return {
         data: {
-          data: response.data.data || [], // ← Sudah benar!
+          data: transformedTransactions,
         },
       };
     } catch (error) {
@@ -224,14 +263,16 @@ export const transactionsAPI = {
 
   getById: async (id: string | number) => {
     try {
-      // ✅ Ambil dari list transactions lalu filter
       const response = await api.get("/transactions/my");
       const transactions = response.data.data || [];
       const transaction = transactions.find((t: any) => t.id === Number(id));
 
       console.log("Transaction detail:", transaction);
 
-      return { data: transaction || null };
+      // ✅ Transform transaction untuk fix payment_proof URL
+      return {
+        data: transaction ? transformTransaction(transaction) : null,
+      };
     } catch (error) {
       console.error("Transaction detail error:", error);
       return { data: null };
